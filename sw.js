@@ -1,5 +1,5 @@
 /* Офлайн-кэш оболочки. Данные пользователя тут ни при чём — они в localStorage и IndexedDB. */
-const CACHE = 'stroyka-v1';
+const CACHE = 'stroyka-v2';
 const SHELL = [
   './',
   './index.html',

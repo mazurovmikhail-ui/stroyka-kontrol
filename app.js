@@ -57,11 +57,14 @@ const D = {
     const p = n => String(n).padStart(2, '0');
     return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
   },
+  /* Короткая дата. Год дописываем, если он не текущий: у работ на несколько лет
+     «30 ноя» без года читается одинаково для 2026 и 2027. */
   ruShort(s) {
     if (!s) return '—';
     const d = D.parse(s);
     const m = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-    return `${d.getDate()} ${m[d.getMonth()]}`;
+    const y = d.getFullYear() === new Date().getFullYear() ? '' : ` ${String(d.getFullYear()).slice(2)}`;
+    return `${d.getDate()} ${m[d.getMonth()]}${y}`;
   },
   max(a, b) { return D.parse(a) > D.parse(b) ? a : b; }
 };
@@ -337,6 +340,15 @@ function bar(donePct, planPct, level) {
     <div class="bar-legend"><span>факт ${d}%</span><span>план на сегодня ${p}%</span></div>`;
 }
 
+/* Короткая подпись на плашке материала. Порог тот же, что у supplyStats.action,
+   иначе плашка пишет «через 2 дн.», а карточка — «заказывать сегодня». */
+function supplyBadgeText(s) {
+  if (s.st.done || s.enough) return 'запаса хватает';
+  if (s.daysToOrder == null) return 'нет темпа';
+  if (s.daysToOrder <= 2) return 'заказ сейчас';
+  return `через ${s.daysToOrder} дн.`;
+}
+
 function workBadge(st) {
   if (st.done) return '<span class="badge ok">закрыта</span>';
   if (st.stalled) return '<span class="badge bad">темп нулевой</span>';
@@ -412,7 +424,7 @@ function viewSummary() {
         ? `Сигнал получен за ${days(ps.daysLeft)} до срока сдачи.`
         : `Договорный срок прошёл ${days(-ps.daysLeft)} назад.`;
     } else if (risky.length) {
-      hint = `Запас есть, но ${risky.length} ${plural(risky.length, 'работа выбивается', 'работы выбиваются', 'работ выбиваются')} из своего срока — запас на этом и съедается.`;
+      hint = `${risky.length} ${plural(risky.length, 'работа выбивается', 'работы выбиваются', 'работ выбиваются')} из своего срока — резерв объекта съедается на них.`;
     }
 
     hero = `<div class="hero">
@@ -450,7 +462,7 @@ function viewSummary() {
         <div class="row top"><div class="stack grow">
           <div class="name">${esc(m.name)}</div>
           <div class="muted">${s.qty > 0 ? `${num(s.qty)} ${esc(m.unit)} · ` : ''}${esc(s.action)}</div>
-        </div><span class="badge ${s.level}">${s.daysToOrder == null ? '?' : s.daysToOrder <= 0 ? 'сейчас' : '+' + s.daysToOrder + ' дн.'}</span></div>
+        </div><span class="badge ${s.level}">${esc(supplyBadgeText(s))}</span></div>
       </div>`).join('') : '';
 
   const devBlock = dev.length ? `<div class="section-title">Открытые отклонения</div>
@@ -580,7 +592,7 @@ function viewSupply() {
           <div class="name">${esc(m.name)}</div>
           <div class="muted">${esc(s.w.name)}</div>
         </div>
-        <span class="badge ${s.level}">${s.daysToOrder == null ? 'нет темпа' : s.daysToOrder <= 0 ? 'заказ сейчас' : 'через ' + s.daysToOrder + ' дн.'}</span>
+        <span class="badge ${s.level}">${esc(supplyBadgeText(s))}</span>
       </div>
       <div class="kv"><span class="k">Заказать</span><span class="v">${s.qty > 0 ? num(s.qty) + ' ' + esc(m.unit) : '—'}</span></div>
       <div class="kv"><span class="k">На складе</span><span class="v">${num(s.stock)} ${esc(m.unit)}${isFinite(s.stockDays) ? ` · на ${days(Math.floor(s.stockDays))}` : ''}</span></div>
@@ -912,55 +924,76 @@ async function analyzePhoto(blob) {
 
 /* ============================================================
    8. Демо-объект — чтобы сразу увидеть, как считается
+
+   Взят реальный объект: ЖК «Исторический», башня «Мир».
+   Владивосток, ул. Снеговая, 9. Застройщик ООО СЗ «Строй Проект» (ГК С.АН ГРУПП).
+   Срок передачи ключей — II квартал 2028 (сайт застройщика, август 2026).
+   Состав и объёмы работ, нормы расхода и остатки на складе — прикидка под
+   25-этажную монолитно-кирпичную башню, у застройщика они свои.
+   Даты замеров отсчитываются от сегодня, чтобы демо не протухало.
    ============================================================ */
 
 function loadDemo() {
   const t = D.today();
   const pid = uid();
-  S.projects.push({ id: pid, name: 'ЖК Агат, корпус 2', start: D.add(t, -60), plannedEnd: D.add(t, 28) });
+  S.projects.push({
+    id: pid,
+    name: 'ЖК Исторический, башня «Мир»',
+    start: '2025-11-10',
+    plannedEnd: '2028-06-30'
+  });
   S.currentId = pid;
 
-  const w1 = uid(), w2 = uid(), w3 = uid();
+  const w1 = uid(), w2 = uid(), w3 = uid(), w4 = uid(), w5 = uid();
   S.works.push(
     {
-      id: w1, pid, name: 'Монолит, 4 этаж', unit: 'м³', planQty: 320,
-      start: D.add(t, -24), end: D.add(t, 16),
+      id: w1, pid, name: 'Монолитный каркас, эт. 1–25', unit: 'м³', planQty: 12400,
+      start: '2025-11-10', end: '2026-11-30',
       progress: [
-        { date: D.add(t, -18), qty: 48 },
-        { date: D.add(t, -11), qty: 96 },
-        { date: D.add(t, -4), qty: 140 }
+        { date: D.add(t, -78), qty: 5100 },
+        { date: D.add(t, -48), qty: 6180 },
+        { date: D.add(t, -17), qty: 7180 },
+        { date: D.add(t, -3), qty: 7860 }
       ]
     },
     {
-      id: w2, pid, name: 'Кладка наружных стен, 1–3 этаж', unit: 'м²', planQty: 1800,
-      start: D.add(t, -45), end: D.add(t, 5),
+      id: w2, pid, name: 'Кладка стен и перегородок', unit: 'м²', planQty: 9800,
+      start: '2026-04-01', end: '2027-03-31',
       progress: [
-        { date: D.add(t, -30), qty: 520 },
-        { date: D.add(t, -15), qty: 1090 },
-        { date: D.add(t, -2), qty: 1560 }
+        { date: D.add(t, -48), qty: 2100 },
+        { date: D.add(t, -17), qty: 3050 },
+        { date: D.add(t, -3), qty: 3600 }
       ]
     },
     {
-      id: w3, pid, name: 'Отделка, 1–3 этаж', unit: 'м²', planQty: 2400,
-      start: D.add(t, -10), end: D.add(t, 28),
+      id: w3, pid, name: 'Фасад навесной вентилируемый', unit: 'м²', planQty: 11200,
+      start: '2026-07-15', end: '2027-06-30',
       progress: [
-        { date: D.add(t, -6), qty: 190 },
-        { date: D.add(t, -2), qty: 384 }
+        { date: D.add(t, -17), qty: 520 },
+        { date: D.add(t, -3), qty: 980 }
       ]
+    },
+    {
+      id: w4, pid, name: 'Инженерные сети и стояки', unit: 'м', planQty: 24800,
+      start: '2027-01-15', end: '2027-11-30', progress: []
+    },
+    {
+      id: w5, pid, name: 'Отделка МОП и квартир', unit: 'м²', planQty: 21300,
+      start: '2027-06-01', end: '2028-05-31', progress: []
     }
   );
 
   S.materials.push(
-    { id: uid(), pid, wid: w1, name: 'Бетон В25', unit: 'м³', norm: 1.02, stock: 60, lead: 2, buffer: 1, cover: 7, lot: 6 },
-    { id: uid(), pid, wid: w1, name: 'Арматура А500С', unit: 'т', norm: 0.09, stock: 20, lead: 10, buffer: 4, cover: 14, lot: 1 },
-    { id: uid(), pid, wid: w2, name: 'Газоблок D500', unit: 'м³', norm: 0.2, stock: 26, lead: 7, buffer: 3, cover: 10, lot: 2 },
-    { id: uid(), pid, wid: w3, name: 'Смесь штукатурная', unit: 'т', norm: 0.018, stock: 9, lead: 5, buffer: 2, cover: 10, lot: 1 }
+    { id: uid(), pid, wid: w1, name: 'Бетон В30 W6', unit: 'м³', norm: 1.02, stock: 220, lead: 2, buffer: 1, cover: 7, lot: 6 },
+    { id: uid(), pid, wid: w1, name: 'Арматура А500С', unit: 'т', norm: 0.105, stock: 96, lead: 14, buffer: 5, cover: 14, lot: 1 },
+    { id: uid(), pid, wid: w2, name: 'Газобетонный блок D500', unit: 'м³', norm: 0.11, stock: 84, lead: 7, buffer: 3, cover: 10, lot: 2 },
+    { id: uid(), pid, wid: w3, name: 'Керамогранит фасадный', unit: 'м²', norm: 1.05, stock: 1250, lead: 21, buffer: 7, cover: 21, lot: 10 }
   );
 
   save();
   tab = 'summary';
   render();
-  toast('Демо-объект загружен');
+  toast('Загружен объект: башня «Мир»');
 }
 
 /* ============================================================
