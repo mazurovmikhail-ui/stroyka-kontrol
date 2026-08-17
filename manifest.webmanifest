@@ -1,0 +1,16 @@
+{
+  "name": "Контроль стройки",
+  "short_name": "Стройка",
+  "description": "Сроки, темп работ, фотожурнал и график поставок на объекте",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2f2f0",
+  "theme_color": "#16181d",
+  "lang": "ru",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

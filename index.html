@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1a1a">
+<title>Контроль стройки</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div>
+      <div class="brand">Контроль стройки</div>
+      <div class="project-name" id="topProjectName">—</div>
+    </div>
+    <button class="icon-btn" id="btnProjects" aria-label="Объекты">⌄</button>
+  </div>
+</header>
+
+<main id="view"></main>
+
+<nav class="tabbar" id="tabbar">
+  <button data-tab="summary" class="tab active"><span class="ti">◔</span>Сводка</button>
+  <button data-tab="works" class="tab"><span class="ti">▤</span>Работы</button>
+  <button data-tab="photos" class="tab"><span class="ti">▣</span>Фото</button>
+  <button data-tab="supply" class="tab"><span class="ti">▦</span>Поставки</button>
+  <button data-tab="settings" class="tab"><span class="ti">⚙</span>Ещё</button>
+</nav>
+
+<div class="sheet-backdrop" id="backdrop" hidden></div>
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-head">
+    <div class="sheet-title" id="sheetTitle"></div>
+    <button class="icon-btn" id="sheetClose" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="sheet-body" id="sheetBody"></div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
